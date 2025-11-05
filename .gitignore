@@ -1,3 +1,4 @@
 *.npy
 .env
 prototype/*
+fasttext_lee_background
