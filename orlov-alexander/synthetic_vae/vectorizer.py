@@ -1,9 +1,3 @@
-"""
-vectorizer.py — Модуль для получения эмбеддингов текста.
-
-Поддерживает SentenceTransformer (all-MiniLM-L6-v2 по умолчанию).
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -23,14 +17,14 @@ def load_model(
 ) -> SentenceTransformer:
     local = Path(local_path)
     if local.exists():
-        print(f"Загружаем модель из локального кэша: {local_path}")
+        print(f"load model from local cache: {local_path}")
         return SentenceTransformer(local_path)
 
-    print(f"Загружаем модель с HuggingFace: {model_name}")
+    print(f"load model from HuggingFace: {model_name}")
     model = SentenceTransformer(model_name)
     if save_local:
         model.save(local_path)
-        print(f"Модель сохранена в {local_path}")
+        print(f"model save in {local_path}")
     return model
 
 
@@ -46,7 +40,7 @@ def text_to_embeddings(
 
     embeddings: dict[str, np.ndarray] = {}
     for col in text_cols:
-        print(f"  Кодируем колонку '{col}'...")
+        print(f"  vectorize col '{col}'...")
         texts = df[col].fillna(" ").astype(str).tolist()
         emb = model.encode(
             texts,

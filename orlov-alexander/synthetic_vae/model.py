@@ -1,14 +1,3 @@
-"""
-model.py — Архитектура β-VAE и вспомогательные функции.
-
-Содержит:
-  - VAE: класс модели (encoder + reparameterize + decoder)
-  - free_bits_kl_loss: KL с защитой от posterior collapse
-  - LogCoshLoss: альтернативный reconstruction loss
-  - cyclical_beta / beta_schedule: расписания β
-  - generate_vectors: сэмплинг из обученного VAE
-"""
-
 from __future__ import annotations
 
 import numpy as np
@@ -18,14 +7,6 @@ import torch.nn.functional as F
 
 
 class VAE(nn.Module):
-    """Вариационный автоэнкодер для плотных эмбеддингов (384d → latent → 384d).
-
-    Args:
-        input_dim: Размерность входного эмбеддинга.
-        hidden_dim: Размер скрытых слоёв (по умолчанию 128).
-        latent_dim: Размерность латентного пространства (по умолчанию 50).
-    """
-
     def __init__(
         self,
         input_dim: int,

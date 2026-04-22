@@ -1,18 +1,3 @@
-"""
-validation.py — Валидация синтетических эмбеддингов.
-
-Метрики:
-  - Статистические: mean, std, q25/q50/q75, IQR (абс. и отн. ошибки)
-  - Геометрические: косинусное сходство центроидов, diversity (pairwise cosine)
-  - Распределение: Sliced Wasserstein Distance (SWD)
-  - Форма: skew MAE, kurt MAE
-
-Функции:
-  - validate_synthetic_data   → detailed DataFrame (одна строка на колонку)
-  - validate_synthetic_data_pivot → pivot-таблица (метрики × колонки)
-  - calculate_wasserstein_metrics → SWD + normalized SWD
-"""
-
 from __future__ import annotations
 
 import warnings
@@ -191,7 +176,7 @@ def calculate_wasserstein_metrics(
         syn_vec = _to_numpy(row["synthetic_features"])
 
         if col not in original_embeddings:
-            print(f"  Предупреждение: нет оригинальных эмбеддингов для '{col}'")
+            print(f"  warning: нет оригинальных эмбеддингов для '{col}'")
             continue
 
         orig_vec = original_embeddings[col]
@@ -238,5 +223,5 @@ def validate_synthetic_data_pivot(
         .set_index("column")[pivot_cols]
         .T.round(6)
     )
-    pivot.columns.name = "Metric"
+    pivot.columns.name = "metric"
     return pivot, detailed

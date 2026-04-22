@@ -1,15 +1,4 @@
-"""
-synthetic_vae — Пакет синтеза текстовых данных через β-VAE на sentence embeddings.
-
-Модули:
-  vectorizer   Загрузка SentenceTransformer и кодирование текста.
-  stats        Вычисление описательных статистик эмбеддингов.
-  model        Архитектура VAE, функции потерь, β-расписания.
-  trainer      Цикл обучения VAE по колонкам, генерация синтетики.
-  validation   Валидация (статистики, SWD, cosine, diversity).
-  pipeline     Сквозной пайплайн SyntheticEmbeddingPipeline.
-"""
-
+from .decoder import EmbeddingToTextDecoder
 from .model import VAE, LogCoshLoss, cyclical_beta, generate_vectors
 from .pipeline import SyntheticEmbeddingPipeline
 from .stats import compute_embedding_stats
@@ -23,6 +12,7 @@ from .vectorizer import load_model, text_to_embeddings
 
 __all__ = [
     "SyntheticEmbeddingPipeline",
+    "EmbeddingToTextDecoder",
     "VAE",
     "LogCoshLoss",
     "cyclical_beta",
