@@ -51,6 +51,14 @@ def _to_numpy(arr) -> np.ndarray:
     return np.asarray(arr)
 
 
+def _per_dim_mae(orig_vec: np.ndarray, syn_vec: np.ndarray) -> float:
+    return float(np.mean(np.abs(orig_vec - syn_vec)))
+
+
+def _per_dim_rel_mae(orig_vec: np.ndarray, syn_vec: np.ndarray) -> float:
+    return float(np.mean(np.abs(orig_vec - syn_vec) / (np.abs(orig_vec) + 1e-10)))
+
+
 def validate_synthetic_data(
     synthetic_data: pd.DataFrame,
     summary_df: pd.DataFrame,
@@ -67,36 +75,45 @@ def validate_synthetic_data(
 
         orig = summary_dict[col]
 
-        orig_mean = orig["overall_mean"]
-        orig_std = orig["overall_std"]
-        orig_q25 = orig["overall_q25"]
-        orig_q50 = orig["overall_q50"]
-        orig_q75 = orig["overall_q75"]
-        orig_iqr = orig["overall_iqr"]
+        orig_mean_vec = orig["mean_vector"]
+        orig_std_vec = orig["std_vector"]
+        orig_q25_vec = orig["q25_vector"]
+        orig_q50_vec = orig["q50_vector"]
+        orig_q75_vec = orig["q75_vector"]
+        orig_iqr_vec = orig["iqr_vector"]
         orig_skew_vec = orig["skew_vector"]
         orig_kurt_vec = orig["kurt_vector"]
 
         syn_mean_vec = np.mean(syn_vec, axis=0)
         syn_std_vec = np.std(syn_vec, axis=0)
+        syn_q25_vec = np.percentile(syn_vec, 25, axis=0)
+        syn_q50_vec = np.percentile(syn_vec, 50, axis=0)
+        syn_q75_vec = np.percentile(syn_vec, 75, axis=0)
+        syn_iqr_vec = syn_q75_vec - syn_q25_vec
 
         valid_mask = syn_std_vec > 1e-9
         collapsed_dims = int(np.sum(~valid_mask))
-        final_mask = valid_mask & (~np.isnan(orig_skew_vec))
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             syn_skew_vec = stats.skew(syn_vec, axis=0, nan_policy="omit")
             syn_kurt_vec = stats.kurtosis(syn_vec, axis=0, nan_policy="omit")
 
-        skew_mae = float(np.mean(np.abs(orig_skew_vec[final_mask] - syn_skew_vec[final_mask]))) if final_mask.any() else float("nan")
-        kurt_mae = float(np.mean(np.abs(orig_kurt_vec[final_mask] - syn_kurt_vec[final_mask]))) if final_mask.any() else float("nan")
+        mean_mae = _per_dim_mae(orig_mean_vec, syn_mean_vec)
+        std_mae = _per_dim_mae(orig_std_vec, syn_std_vec)
+        q25_mae = _per_dim_mae(orig_q25_vec, syn_q25_vec)
+        q50_mae = _per_dim_mae(orig_q50_vec, syn_q50_vec)
+        q75_mae = _per_dim_mae(orig_q75_vec, syn_q75_vec)
+        iqr_mae = _per_dim_mae(orig_iqr_vec, syn_iqr_vec)
+        skew_mae = _per_dim_mae(orig_skew_vec, syn_skew_vec)
+        kurt_mae = _per_dim_mae(orig_kurt_vec, syn_kurt_vec)
 
-        syn_mean = float(np.mean(syn_mean_vec))
-        syn_std = float(np.mean(syn_std_vec))
-        syn_q25 = float(np.mean(np.percentile(syn_vec, 25, axis=1)))
-        syn_q50 = float(np.mean(np.percentile(syn_vec, 50, axis=1)))
-        syn_q75 = float(np.mean(np.percentile(syn_vec, 75, axis=1)))
-        syn_iqr = syn_q75 - syn_q25
+        mean_rel_mae = _per_dim_rel_mae(orig_mean_vec, syn_mean_vec)
+        std_rel_mae = _per_dim_rel_mae(orig_std_vec, syn_std_vec)
+        q25_rel_mae = _per_dim_rel_mae(orig_q25_vec, syn_q25_vec)
+        q50_rel_mae = _per_dim_rel_mae(orig_q50_vec, syn_q50_vec)
+        q75_rel_mae = _per_dim_rel_mae(orig_q75_vec, syn_q75_vec)
+        iqr_rel_mae = _per_dim_rel_mae(orig_iqr_vec, syn_iqr_vec)
 
         orig_vecs = original_embeddings[col]
         centr_cos = float(
@@ -108,12 +125,6 @@ def validate_synthetic_data(
         syn_div, _ = calculate_pairwise_diversity(syn_vec)
         orig_div, _ = calculate_pairwise_diversity(orig_vecs)
 
-        def abs_err(s, o):
-            return abs(s - o)
-
-        def rel_err(s, o):
-            return abs(s - o) / (abs(o) + 1e-8)
-
         rows.append(
             {
                 "column": col,
@@ -123,44 +134,46 @@ def validate_synthetic_data(
                 "collapsed_dims": collapsed_dims,
                 "total_dims": syn_vec.shape[1],
 
-                "orig_mean": orig_mean,
-                "syn_mean": syn_mean,
-                "orig_std": orig_std,
-                "syn_std": syn_std,
-                "orig_q25": orig_q25,
-                "syn_q25": syn_q25,
-                "orig_q50": orig_q50,
-                "syn_q50": syn_q50,
-                "orig_q75": orig_q75,
-                "syn_q75": syn_q75,
-                "orig_iqr": orig_iqr,
-                "syn_iqr": syn_iqr,
+                "mean_mae":      mean_mae,
+                "std_mae":       std_mae,
+                "q25_mae":       q25_mae,
+                "q50_mae":       q50_mae,
+                "q75_mae":       q75_mae,
+                "iqr_mae":       iqr_mae,
+                "skew_mae":      skew_mae,
+                "kurt_mae":      kurt_mae,
+
+                "mean_rel_mae": mean_rel_mae,
+                "std_rel_mae": std_rel_mae,
+                "q25_rel_mae": q25_rel_mae,
+                "q50_rel_mae": q50_rel_mae,
+                "q75_rel_mae": q75_rel_mae,
+                "iqr_rel_mae": iqr_rel_mae,
 
                 "centr_cos_sim": centr_cos,
                 "syn_diversity_avg": syn_div,
                 "orig_diversity_avg": orig_div,
 
-                "abs_err_mean": abs_err(syn_mean, orig_mean),
-                "abs_err_std": abs_err(syn_std, orig_std),
-                "abs_err_q25": abs_err(syn_q25, orig_q25),
-                "abs_err_q50": abs_err(syn_q50, orig_q50),
-                "abs_err_q75": abs_err(syn_q75, orig_q75),
-                "abs_err_iqr": abs_err(syn_iqr, orig_iqr),
-
-                "rel_err_mean": rel_err(syn_mean, orig_mean),
-                "rel_err_std": rel_err(syn_std, orig_std),
-                "rel_err_q25": rel_err(syn_q25, orig_q25),
-                "rel_err_q50": rel_err(syn_q50, orig_q50),
-                "rel_err_q75": rel_err(syn_q75, orig_q75),
-                "rel_err_iqr": rel_err(syn_iqr, orig_iqr),
-
-                "skew_mae": skew_mae,
-                "kurt_mae": kurt_mae,
+                "_orig_mean_vec": orig_mean_vec,
+                "_syn_mean_vec": syn_mean_vec,
+                "_orig_std_vec": orig_std_vec,
+                "_syn_std_vec": syn_std_vec,
+                "_orig_q25_vec": orig_q25_vec,
+                "_syn_q25_vec": syn_q25_vec,
+                "_orig_q50_vec": orig_q50_vec,
+                "_syn_q50_vec": syn_q50_vec,
+                "_orig_q75_vec": orig_q75_vec,
+                "_syn_q75_vec": syn_q75_vec,
+                "_orig_iqr_vec": orig_iqr_vec,
+                "_syn_iqr_vec": syn_iqr_vec,
             }
         )
 
     results_df = pd.DataFrame(rows)
-    composite_cols = ["rel_err_mean", "rel_err_std", "rel_err_q25", "rel_err_q50", "rel_err_q75", "rel_err_iqr"]
+    composite_cols = [
+        "mean_rel_mae", "std_rel_mae",
+        "q25_rel_mae", "q50_rel_mae", "q75_rel_mae", "iqr_rel_mae",
+    ]
     results_df["composite_score"] = results_df[composite_cols].mean(axis=1)
     return results_df
 
@@ -206,16 +219,14 @@ def validate_synthetic_data_pivot(
     detailed = validate_synthetic_data(synthetic_data, summary_df, features_data)
 
     pivot_cols = [
-        "orig_mean", "syn_mean", "abs_err_mean", "rel_err_mean",
-        "orig_std", "syn_std", "abs_err_std", "rel_err_std",
-        "orig_q25", "syn_q25", "abs_err_q25", "rel_err_q25",
-        "orig_q50", "syn_q50", "abs_err_q50", "rel_err_q50",
-        "orig_q75", "syn_q75", "abs_err_q75", "rel_err_q75",
-        "orig_iqr", "syn_iqr", "abs_err_iqr", "rel_err_iqr",
-        "composite_score", "centr_cos_sim",
+        "mean_mae", "std_mae", "q25_mae", "q50_mae",
+        "q75_mae", "iqr_mae", "skew_mae", "kurt_mae",
+        "mean_rel_mae", "std_rel_mae", "q25_rel_mae", "q50_rel_mae",
+        "q75_rel_mae", "iqr_rel_mae",
+        "composite_score",
+        "centr_cos_sim",
         "syn_diversity_avg", "orig_diversity_avg",
-        "skew_mae", "kurt_mae",
-        "collapsed_dims", "total_dims",
+        "collapsed_dims",
     ]
 
     pivot = (
