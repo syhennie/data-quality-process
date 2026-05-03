@@ -21,6 +21,7 @@ def compute_embedding_stats(
         q25_vec  = np.percentile(emb, 25, axis=0)
         q50_vec  = np.percentile(emb, 50, axis=0)
         q75_vec  = np.percentile(emb, 75, axis=0)
+        iqr_vec = q75_vec - q25_vec
 
         overall_mean = float(np.mean(mean_vec))
         overall_std  = float(np.mean(std_vec))
@@ -40,6 +41,7 @@ def compute_embedding_stats(
                 "overall_q50":  overall_q50,
                 "overall_q75":  overall_q75,
                 "overall_iqr":  overall_iqr,
+
                 "mean_vector": mean_vec,
                 "std_vector":  std_vec,
                 "skew_vector": skew_vec,
@@ -47,6 +49,7 @@ def compute_embedding_stats(
                 "q25_vector":  q25_vec,
                 "q50_vector":  q50_vec,
                 "q75_vector":  q75_vec,
+                "iqr_vector": iqr_vec,
             }
         )
 
