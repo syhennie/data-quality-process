@@ -100,7 +100,7 @@ class SyntheticEmbeddingPipeline:
         detailed = detailed.merge(wasserstein, on="column", how="left")
         if "normalized_swd" in detailed.columns:
             detailed["normalized_swd_capped"] = detailed["normalized_swd"].clip(upper=1.0)
-            cols = ["rel_err_mean", "rel_err_std", "rel_err_q25", "rel_err_q50", "rel_err_q75", "rel_err_iqr", "normalized_swd_capped"]
+            cols = ["mean_rel_mae", "std_rel_mae", "q25_rel_mae", "q50_rel_mae", "q75_rel_mae", "iqr_rel_mae", "normalized_swd_capped"]
             detailed["composite_score_with_swd"] = detailed[cols].mean(axis=1)
 
         return pivot, detailed, wasserstein
@@ -132,7 +132,8 @@ class SyntheticEmbeddingPipeline:
                 continue
 
             texts = df[col].fillna(" ").astype(str).tolist()
-            embeddings = self.embeddings_[col]
+            raw = next(f for f in self.features_data_ if f["column"] == col)
+            embeddings = raw["raw_features"]
             print(f"\n  col: {col!r}  ({len(texts)} текстов, {embeddings.shape[1]}d)")
 
             decoder = EmbeddingToTextDecoder(

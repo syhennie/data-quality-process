@@ -8,7 +8,7 @@ from transformers import AutoConfig, T5ForConditionalGeneration, T5Tokenizer
 from transformers.modeling_outputs import BaseModelOutput
 
 
-T5_MODEL = "google/t5-efficient-tiny"
+T5_MODEL = "google/t5-small"
 
 
 def _choose_trainable_layers(n_samples: int) -> str:

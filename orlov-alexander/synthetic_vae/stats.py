@@ -15,7 +15,7 @@ def compute_embedding_stats(
         n, dim = emb.shape
 
         mean_vec = np.mean(emb, axis=0)
-        std_vec  = np.std(emb, axis=0)
+        std_vec  = np.std(emb, ddof=1, axis=0)
         skew_vec = stats.skew(emb, axis=0, nan_policy="omit")
         kurt_vec = stats.kurtosis(emb, axis=0, nan_policy="omit")
         q25_vec  = np.percentile(emb, 25, axis=0)
@@ -25,9 +25,9 @@ def compute_embedding_stats(
 
         overall_mean = float(np.mean(mean_vec))
         overall_std  = float(np.mean(std_vec))
-        overall_q25  = float(np.mean(np.percentile(emb, 25, axis=1)))
-        overall_q50  = float(np.mean(np.percentile(emb, 50, axis=1)))
-        overall_q75  = float(np.mean(np.percentile(emb, 75, axis=1)))
+        overall_q25  = float(np.mean(np.percentile(emb, 25, axis=0)))
+        overall_q50  = float(np.mean(np.percentile(emb, 50, axis=0)))
+        overall_q75  = float(np.mean(np.percentile(emb, 75, axis=0)))
         overall_iqr  = overall_q75 - overall_q25
 
         summary_rows.append(

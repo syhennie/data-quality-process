@@ -73,12 +73,11 @@ class LogCoshLoss(nn.Module):
 def free_bits_kl_loss(
     mu: torch.Tensor,
     logvar: torch.Tensor,
-    free_bits: float = 1.0,
+    free_bits: float = 0.1,
 ) -> torch.Tensor:
-    kl = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1)
-    kl_per_dim = kl / mu.size(1)
-    floor = torch.full_like(kl_per_dim, free_bits)
-    return torch.mean(torch.max(kl_per_dim, floor))
+    kl_per_dim = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp())
+    kl_per_dim = torch.clamp(kl_per_dim, min=free_bits)
+    return torch.mean(kl_per_dim)
 
 
 def vae_loss(
@@ -102,7 +101,7 @@ def cyclical_beta(
     base_beta: float = 0.01,
     max_beta: float = 0.5,
 ) -> float:
-    cycle = np.sin(2 * np.pi * epoch / epochs)
+    cycle = np.cos(2 * np.pi * epoch / epochs)
     return base_beta + 0.5 * (max_beta - base_beta) * (cycle + 1)
 
 
@@ -110,10 +109,10 @@ def linear_warmup_beta(
     epoch: int,
     warmup_epochs: int = 50,
     max_beta: float = 0.4,
+    total_epochs=100,
 ) -> float:
-    if epoch < warmup_epochs:
-        return (max_beta / warmup_epochs) * epoch
-    return max_beta * (1 - 0.5 * (epoch - warmup_epochs) / 150)
+    decay = (epoch - warmup_epochs) / (total_epochs - warmup_epochs)
+    return max_beta * (1 - 0.5 * decay)
 
 
 def generate_vectors(
@@ -122,7 +121,8 @@ def generate_vectors(
     latent_dim: int = 50,
     device: str = "cpu",
 ) -> torch.Tensor:
+    temperature = 1.2
     model.eval()
     with torch.no_grad():
-        z = torch.randn(num_samples, latent_dim, device=device)
+        z = torch.randn(num_samples, latent_dim, device=device) * temperature
         return model.decode(z)

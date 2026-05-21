@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 import torch.optim as optim
 
-from .model import VAE, LogCoshLoss, generate_vectors, vae_loss
+from .model import VAE, LogCoshLoss, generate_vectors, vae_loss, free_bits_kl_loss
 
 
 def _warmup_beta(epoch: int, epochs: int, max_beta: float, warmup_ratio: float = 0.3) -> float:
@@ -55,12 +55,16 @@ def train_vae_per_column(
         optimizer   = optim.Adam(model.parameters(), lr=lr)
 
         loss_history: list[float] = []
+        recon_history: list[float] = []
+        kl_history: list[float] = []
         total_loss = 0.0
 
         for epoch in range(epochs):
             model.train()
             beta       = _warmup_beta(epoch, epochs, max_beta, warmup_ratio)
             total_loss = 0.0
+            recon_epoch_loss = 0.0
+            kl_epoch_loss = 0.0
             perm       = torch.randperm(n_samples, device=device)
 
             for i in range(0, n_samples, batch_size):
@@ -68,15 +72,22 @@ def train_vae_per_column(
                 batch = data_tensor[idx]
 
                 optimizer.zero_grad()
-                recon, mu, logvar = model(batch)          # temp=1.0 locked
-                loss = vae_loss(recon, batch, mu, logvar, beta=beta, criterion=criterion)
+                recon, mu, logvar = model(batch)
+                #loss = vae_loss(recon, batch, mu, logvar, beta=beta, criterion=criterion)
+                criterion_loss = criterion(recon, batch)
+                kl = free_bits_kl_loss(mu, logvar)
+                loss = criterion_loss + beta * kl
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
+                recon_epoch_loss += criterion_loss.item()
+                kl_epoch_loss += kl.item()
 
             loss_history.append(total_loss)
+            recon_history.append(recon_epoch_loss)
+            kl_history.append(kl_epoch_loss)
 
-            if verbose:
+            if verbose and epoch % 10 == 0:
                 print(
                     f"  [{column}] epoch {epoch + 1:3d}/{epochs}"
                     f"  β={beta:.4f}  loss={total_loss:.4f}"
@@ -90,8 +101,10 @@ def train_vae_per_column(
                 "column":            column,
                 "n_entries":         n_samples,
                 "total_loss":        total_loss,
-                "synthetic_features": synthetic_vectors,
+                "synthetic_features":synthetic_vectors,
                 "loss_history":      loss_history,
+                "recon_history":     recon_history,
+                "kl_history":        kl_history,
             }
         )
 
